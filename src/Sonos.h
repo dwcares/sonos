@@ -18,6 +18,13 @@
 #define SONOS_POSITION_INFO "<u:GetPositionInfo xmlns:u=\"urn:schemas-upnp-org:service:AVTransport:1\"><InstanceID>0</InstanceID></u:GetPositionInfo>"
 #define SONOS_GETVOLUME "<u:GetVolume xmlns:u=\"urn:schemas-upnp-org:service:RenderingControl:1\"><InstanceID>0</InstanceID><Channel>Master</Channel></u:GetVolume>"
 
+#define SOAP_MSG_SIZE 1024
+#define BUFFER_SIZE 512
+#define CMD_TAG_SIZE 20
+#define SONOS_PORT 1400
+#define SONOS_RESPONSE_SIZE 2048
+#define SONOS_CONNECTION_TIMEOUT 1000
+
 #define PAUSEPLAYBACK 0
 #define STARTPLAYBACK 1
 #define NEXTTRACK 2
@@ -55,6 +62,7 @@ class Sonos {
   unsigned long timeout;
   int 
     sonosVolume;
+    
   char 
     songTitle[32],
     songArtist[32],
@@ -68,9 +76,12 @@ class Sonos {
   CallbackInfoType 
     songInfoCallback,
     statusCallback;
-  
+ 
   void 
     setSonosMode(int cmd),
     sonos(int cmd, int sonosVolume),
     out(const char *s);
+    
+  char* 
+    parseResponse(char* response, const char* startTag, const char* endTag);
 };

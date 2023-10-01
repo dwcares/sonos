@@ -81,8 +81,14 @@ Event fired after requesting song info using [getSongInfo](#getsonginfo). Handle
 
 Example:
 ```
-void songInfoHandler(String songInfo) {
-  // Make use of song info. Template: <Artist> - <Song> - <Album>
+void songInfoHandler(String songInfoJson) {
+  // Make use of song info json.
+  // Example: 
+  // {
+  //   "artist":"Taylor Swift",
+  //   "title":"Bejewled",
+  //   "album":"Midnights"
+  // }
 }
 ```
 

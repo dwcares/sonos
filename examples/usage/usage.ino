@@ -30,8 +30,8 @@ void volumeHandler(int volume) {
     Particle.publish("volume", String(volume));
 }
 
-void songInfoHandler(String songInfo) {
-    Particle.publish("songInfo", songInfo);
+void songInfoHandler(String songInfoJson) {
+    Particle.publish("songInfo", songInfoJson);
 }
 
 void playbackStatusHandler(String playbackStatus) {

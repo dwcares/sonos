@@ -74,160 +74,159 @@ void Sonos::setSonosMode(int cmd) {
 void Sonos::sonos(int cmd, int sonosVolume)
 {
 
-  char buf[512];
-  char soapmsg[1024];
-  char cmdtag[20];
+  char buf[BUFFER_SIZE];
+  char soapmsg[SOAP_MSG_SIZE];
+  char cmdtag[CMD_TAG_SIZE];
 
-  if (client.connect(sonosip, 1400)) {
+  if (client.connect(sonosip, SONOS_PORT)) {
         switch (cmd) {
             case PAUSEPLAYBACK:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_PAUSE, SOAP_FOOTER); 
-                strcpy(cmdtag, "Pause");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_PAUSE, SOAP_FOOTER); 
+                strncpy(cmdtag, "Pause", sizeof(cmdtag) - 1);
             break;
             case STARTPLAYBACK:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_PLAY, SOAP_FOOTER); 
-                strcpy(cmdtag, "Play");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_PLAY, SOAP_FOOTER); 
+                strncpy(cmdtag, "Play", sizeof(cmdtag) - 1);
             break;
             case NEXTTRACK:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_NEXT, SOAP_FOOTER); 
-                strcpy(cmdtag, "Next");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_NEXT, SOAP_FOOTER); 
+                strncpy(cmdtag, "Next", sizeof(cmdtag) - 1);
             break;
             case PREVIOUSTRACK:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_PREVIOUS, SOAP_FOOTER); 
-                strcpy(cmdtag, "Previous");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_PREVIOUS, SOAP_FOOTER); 
+                strncpy(cmdtag, "Previous", sizeof(cmdtag) - 1);
             break;
             case SETVOLUME:
                 if (sonosVolume < 0) break;
-                sprintf(soapmsg, "%s%s%i%s", SOAP_HEADER, SONOS_SETVOLUME_HEADER, sonosVolume, SONOS_SETVOLUME_FOOTER); 
-                strcpy(cmdtag, "SetVolume");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%i%s", SOAP_HEADER, SONOS_SETVOLUME_HEADER, sonosVolume, SONOS_SETVOLUME_FOOTER); 
+                strncpy(cmdtag, "SetVolume", sizeof(cmdtag) - 1);
             break;
             case GETSONGINFO:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_POSITION_INFO, SOAP_FOOTER); 
-                strcpy(cmdtag, "GetPositionInfo");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_POSITION_INFO, SOAP_FOOTER); 
+                strncpy(cmdtag, "GetPositionInfo", sizeof(cmdtag) - 1);
             break;
             case GETSTATUS:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_TRANSPORT_INFO, SOAP_FOOTER); 
-                strcpy(cmdtag, "GetTransportInfo");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_TRANSPORT_INFO, SOAP_FOOTER); 
+                strncpy(cmdtag, "GetTransportInfo", sizeof(cmdtag) - 1);
             break;
             case GETVOLUME:
-                sprintf(soapmsg, "%s%s%s", SOAP_HEADER, SONOS_GETVOLUME, SOAP_FOOTER); 
-                strcpy(cmdtag, "GetVolume");
+                snprintf(soapmsg, sizeof(soapmsg), "%s%s%s", SOAP_HEADER, SONOS_GETVOLUME, SOAP_FOOTER); 
+                strncpy(cmdtag, "GetVolume", sizeof(cmdtag) - 1);
             break;
         }
-     
-        if (String(cmdtag) == "SetVolume" || String(cmdtag) == "GetVolume") {
+    
+        if (strcmp(cmdtag, "SetVolume") == 0 || strcmp(cmdtag, "GetVolume") == 0) {
             out("POST /MediaRenderer/RenderingControl/Control HTTP/1.1\r\n");
         } else {
             out("POST /MediaRenderer/AVTransport/Control HTTP/1.1\r\n");
         }
-    
-        sprintf(buf, "Host: %d.%d.%d.%d:1400\r\n", sonosip[0], sonosip[1], sonosip[2], sonosip[3]);
+ 
+        snprintf(buf, sizeof(buf), "Host: %d.%d.%d.%d:1400\r\n", sonosip[0], sonosip[1], sonosip[2], sonosip[3]);
         out(buf);
-        sprintf(buf, "Content-Length: %d\r\n", strlen(soapmsg));
+        snprintf(buf, sizeof(buf), "Content-Length: %d\r\n", strlen(soapmsg));
         out(buf);
         out("Content-Type: text/xml; charset=\"utf-8\"\r\n");
         
-        if (String(cmdtag) == "SetVolume" || String(cmdtag) == "GetVolume") {
-            sprintf(buf, "Soapaction: \"urn:schemas-upnp-org:service:RenderingControl:1#%s\"\r\n", cmdtag);
+        if (strcmp(cmdtag, "SetVolume") == 0 || strcmp(cmdtag, "GetVolume") == 0) {
+            snprintf(buf, sizeof(buf), "Soapaction: \"urn:schemas-upnp-org:service:RenderingControl:1#%s\"\r\n", cmdtag);
         } else {
-            sprintf(buf, "Soapaction: \"urn:schemas-upnp-org:service:AVTransport:1#%s\"\r\n", cmdtag);
+            snprintf(buf, sizeof(buf), "Soapaction: \"urn:schemas-upnp-org:service:AVTransport:1#%s\"\r\n", cmdtag);
         }
 
         out(buf);
-    
         out("\r\n");
         out(soapmsg);
         
         timeout = millis();
-        while ((!client.available()) && ((millis() - timeout) < 1000));
+        while ((!client.available()) && ((millis() - timeout) < SONOS_CONNECTION_TIMEOUT));
      
         int i = 0;
-        char sonosResponse[2048];
+        char sonosResponse[SONOS_RESPONSE_SIZE];
         while (client.available()) {
             char c = client.read();
             
-            if (String(cmdtag) == "GetPositionInfo" || String(cmdtag) == "GetTransportInfo" || String(cmdtag) == "GetVolume" ) {
+            if (strcmp(cmdtag, "GetPositionInfo") == 0 || strcmp(cmdtag, "GetTransportInfo") == 0 || strcmp(cmdtag, "GetVolume") == 0) {
                 sonosResponse[i] = c;
                 i++;
             }
             
         }
     
-        if (String(cmdtag) == "GetPositionInfo") {
+        if (strcmp(cmdtag, "GetPositionInfo") == 0) {
             sonosResponse[i] = '\0';
     
-            /* Get the song title */
-            char *p1 = strcasestr(sonosResponse,"dc:title&gt;");
-            char *p2 = strcasestr(sonosResponse,"&lt;/dc:title");
-    
-            int c = 0;
-            for (p1 = p1 + 12; p1 != p2; p1++) {
-                songTitle[c] = *p1;
-                c++;
+            char* title = parseResponse(sonosResponse, "dc:title&gt;", "&lt;/dc:title");
+            if (title) {
+                strncpy(songTitle, title, sizeof(songTitle) - 1);
+                free(title);
             }
-            songTitle[c] = '\0';
-    
-            /* Get the Artist */
-            p1 = strcasestr(sonosResponse,"dc:creator&gt;");
-            p2 = strcasestr(sonosResponse,"&lt;/dc:creator");
-            c = 0;
+            char* artist = parseResponse(sonosResponse, "dc:creator&gt;", "&lt;/dc:creator");
+            if (artist) {
+                strncpy(songArtist, artist, sizeof(songArtist) - 1);
+                free(artist);
+            }
+            char* album = parseResponse(sonosResponse, ";upnp:album&gt;", "&lt;/upnp:album&gt");
+            if (album) {
+                strncpy(songAlbum, album, sizeof(songAlbum) - 1);
+                free(album);
+            }
             
-            for (p1 = p1 + 14; p1 != p2; p1++) {
-                songArtist[c] = *p1;
-                c++;
-            }
-            songArtist[c] = '\0';
-    
-            /* Get the Album */
-            p1 = strcasestr(sonosResponse,";upnp:album&gt;");
-            p2 = strcasestr(sonosResponse,"&lt;/upnp:album&gt");
-            c = 0;
+            memset(buf, 0, sizeof(buf));
+
+            JSONBufferWriter writer(buf, sizeof(buf));
+            writer.beginObject();
+                writer.name("artist").value(songArtist);
+                writer.name("title").value(songTitle);
+                writer.name("album").value(songAlbum);
+            writer.endObject();
             
-            for (p1 = p1 + 15; p1 != p2; p1++) {
-                songAlbum[c] = *p1;
-                c++;
-            }
-            songAlbum[c] = '\0';
-            String songInfo = String(String(songArtist) + " - " + String(songTitle) +  " - " +  String(songAlbum));
-            songInfoCallback(songInfo);
-        } else if (String(cmdtag) == "GetTransportInfo") {
+            songInfoCallback(buf);
+            
+        } else if (strcmp(cmdtag, "GetTransportInfo") == 0) {
             sonosResponse[i] = '\0';
             
-            char *p1 = strcasestr(sonosResponse,"<CurrentTransportState>");
-            char *p2 = strcasestr(sonosResponse,"</CurrentTransportState>");
-    
-            int c = 0;
-            for (p1 = p1 + 23; p1 != p2; p1++) {
-                playingStatus[c] = *p1;
-                c++;
+            char* status = parseResponse(sonosResponse, "<CurrentTransportState>", "</CurrentTransportState>");
+            if (status) {
+                strncpy(playingStatus, status, sizeof(playingStatus) - 1);
+                free(status);
             }
-            playingStatus[c] = '\0';
+            
             statusCallback(playingStatus);
-            
-        } else if (String(cmdtag) == "GetVolume") {
+
+
+        }else if (strcmp(cmdtag, "GetVolume") == 0) {
             sonosResponse[i] = '\0';
             
-            char *p1 = strcasestr(sonosResponse,"<CurrentVolume>");
-            char *p2 = strcasestr(sonosResponse,"</CurrentVolume>");
-    
-            int c = 0;
-            for (p1 = p1 + 15; p1 != p2; p1++) {
-                songVolume[c] = *p1;
-                c++;
+            char* volume = parseResponse(sonosResponse, "<CurrentVolume>", "</CurrentVolume>");
+            if (volume) {
+                strncpy(songVolume, volume, sizeof(songVolume) - 1);
+                free(volume);
             }
-            songVolume[c] = '\0';
-            sscanf(songVolume, "%d", &sonosVolume);
             
+            sscanf(songVolume, "%d", &sonosVolume);
             volumeCallback(sonosVolume);
-
-
         }
     
         client.stop();    
   }
 
 }
-  
+
+char* Sonos::parseResponse(char* response, const char* startTag, const char* endTag) {
+    char* value = NULL;
+    char* p1 = strcasestr(response, startTag);
+    char* p2 = strcasestr(response, endTag);
+    if (p1 && p2) {
+        int len = p2 - p1 - strlen(startTag);
+        value = (char*)malloc(len + 1);
+        if (value) {
+            strncpy(value, p1 + strlen(startTag), len);
+            value[len] = '\0';
+        }
+    }
+    return value;
+}
+
 void Sonos::out(const char *s)
 {
     client.write( (const uint8_t*)s, strlen(s) );
